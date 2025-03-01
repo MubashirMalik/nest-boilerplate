@@ -7,6 +7,7 @@ import { JwtService } from "@nestjs/jwt";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "src/entities/User.entity";
 import { LocalStrategy } from "./auth/local.strategy";
+import { RefreshTokenStrategy } from "./auth/refresh-token.strategy";
 
 @Module({
     imports: [
@@ -16,6 +17,6 @@ import { LocalStrategy } from "./auth/local.strategy";
         ])
     ],
     controllers: [AuthController],
-    providers: [LocalStrategy, JwtService,  AuthService, UserService]
+    providers: [LocalStrategy, RefreshTokenStrategy, JwtService,  AuthService, UserService]
 })
 export class CoreModule {}

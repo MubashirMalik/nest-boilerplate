@@ -4,6 +4,8 @@ import { LocalAuthGuard } from "src/guards/local-auth.guard";
 import { ApiTags } from "@nestjs/swagger";
 import { RegisterUserDto } from "./dtos/register-user.dto";
 import { PublicRoute } from "../decorators/public-route.decorator";
+import { RefreshTokenGuard } from "src/guards/refresh-token.guard";
+import { REFRESH_TOKEN_MAX_AGE } from "src/constants";
 
 @Injectable()
 @ApiTags('Auth')
@@ -33,7 +35,12 @@ export class AuthController {
         res.cookie(
             'refreshToken', 
             refreshToken, 
-            { httpOnly: true, secure: true, sameSite: 'None', maxAge: 5 * 60 * 1000  }
+            { 
+                httpOnly: true, 
+                secure: true, 
+                sameSite: 'None',
+                maxAge: REFRESH_TOKEN_MAX_AGE  
+            }
         ).send({ success: true, user, accessToken })
    }
 
@@ -42,9 +49,12 @@ export class AuthController {
         res.send({  success: true , message: 'Logout successful' })
     }
 
-    @Get('/refresh-token')
-    async refreshToken() {
-        //TODO: Should i update cookie time here?
-        return { success: true, user: { email: 'Hello', id: 1 }}
+    @PublicRoute()
+    @UseGuards(RefreshTokenGuard)
+    @Get('refresh-token')
+    async refreshAccessToken(
+        @Request() req,
+    ) {
+        return await this.authService.refreshAccessToken(req.user)
     }
 }

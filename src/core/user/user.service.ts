@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { Repository } from "typeorm";
+import { FindOptionsWhere, Repository } from "typeorm";
 import { User } from "src/entities/User.entity";
 import { InjectRepository } from '@nestjs/typeorm'
 import * as bcrypt from 'bcrypt';
@@ -12,10 +12,10 @@ export class UserService {
         @InjectRepository(User) private readonly userRepo: Repository<User>,
     ) {}
 
-    async getUserByEmail(email: string) {
-        return this.userRepo.findOne({
-            where: { email }
-        })
+    // Generic method to get a user by a specific field
+    async getUserBy(fields: FindOptionsWhere<User> | FindOptionsWhere<User>[]) {
+        const user = await this.userRepo.findOne({ where: fields });
+        return user;
     }
 
     async createUser(registerUserDto: RegisterUserDto) {
