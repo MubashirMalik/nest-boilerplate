@@ -16,25 +16,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
     
     canActivate(context: ExecutionContext) {
-        // NOTE: Route Handler Level Guards take precedence over Class Level Guards in our implementation.
+        const isControllerPublic = this.reflector.get<boolean>('isPublicRoute', context.getClass());
+        if (isControllerPublic) return true
 
-        // Get all the Guards applied on current handler
-        const handlerGuards = this.reflector.get<string[]>('guards', context.getHandler())
-        if (handlerGuards && handlerGuards.length > 0) {
-            // Check for below guards, if applied on the handler we will ignore authentication for these.
-            if (handlerGuards.includes("OptionalJwtAuthGuard") || handlerGuards.includes("LocalAuthGuard")) {
-                return true
-            }
-        }
-
-        // Get all the Guards applied on current handler's controller
-        const controllerGuards = this.reflector.get<string[]>('guards', context.getClass())
-        if (controllerGuards && controllerGuards.length > 0) {
-            // Check for below guards, if applied on the controller we will ignore authentication for these
-            if (controllerGuards.includes("OptionalJwtAuthGuard") || controllerGuards.includes("LocalAuthGuard")) {
-                return true
-            }
-        }
+        const isHandlerRoute = this.reflector.get<boolean>('isPublicRoute', context.getHandler());
+        if (isHandlerRoute) return true;
       
         // Add your custom authentication logic here
         // for example, call super.logIn(request) to establish a session.

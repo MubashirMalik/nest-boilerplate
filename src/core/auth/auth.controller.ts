@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Injectable, Post, Request, Res, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { LocalAuthGuard } from "src/guards/local-auth.guard";
-import { GuardMetadata, OptionalJwtAuthGuard } from "src/guards/config";
 import { ApiTags } from "@nestjs/swagger";
 import { RegisterUserDto } from "./dtos/register-user.dto";
+import { PublicRoute } from "../decorators/public-route.decorator";
 
 @Injectable()
 @ApiTags('Auth')
@@ -13,7 +13,7 @@ export class AuthController {
         private readonly authService: AuthService,
     ) {}
 
-    @GuardMetadata(OptionalJwtAuthGuard)
+    @PublicRoute()
     @Post('register-user')
     async registerTenant(
         @Body() registerUser: RegisterUserDto,
@@ -21,7 +21,7 @@ export class AuthController {
         return await this.authService.registerUser(registerUser)
     }
 
-    @GuardMetadata('LocalAuthGuard')
+    @PublicRoute()
     @UseGuards(LocalAuthGuard)
     @Post('login')
     async login(
