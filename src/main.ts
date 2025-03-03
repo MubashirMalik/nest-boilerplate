@@ -43,9 +43,11 @@ async function bootstrap() {
     }
 
     app.enableCors({
+        methods: ['GET', 'PUT', 'POST', 'OPTION', 'DELETE', 'PATCH'],
         origin: [
             'http://localhost:5173',
         ],
+        credentials: true, // Allow cookies to be sent
     })
 
     await app.listen(process.env.SERVER_PORT);
