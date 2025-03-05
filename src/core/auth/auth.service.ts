@@ -81,7 +81,10 @@ export class AuthService {
 
     async refreshAccessToken(user: User) {
         return { 
-            success: true, 
+            user: {
+                id: user.id,
+                email: user.email
+            }, 
             accessToken: await this.getSignedAccessToken(user) 
         }
     }
