@@ -5,10 +5,17 @@ import * as cookieParser from 'cookie-parser';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
+import * as fs from 'fs';
 
 async function bootstrap() {
+    const httpsOptions = {
+        key: fs.readFileSync('./key.pem'),
+        cert: fs.readFileSync('./cert.pem'),
+    };
+
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-        rawBody: true
+        rawBody: true,
+        ...httpsOptions
     });
 
     // Parsers
@@ -45,6 +52,8 @@ async function bootstrap() {
     app.enableCors({
         methods: ['GET', 'PUT', 'POST', 'OPTION', 'DELETE', 'PATCH'],
         origin: [
+            'https://192.168.1.100:5173',
+            'https://localhost:5173',
             'http://localhost:5173',
         ],
         credentials: true, // Allow cookies to be sent
