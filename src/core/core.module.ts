@@ -8,10 +8,12 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "src/entities/User.entity";
 import { LocalStrategy } from "./auth/local.strategy";
 import { RefreshTokenStrategy } from "./auth/refresh-token.strategy";
+import { RequestContextModule } from "./request-context/request-context.module";
 
 @Module({
     imports: [
         ConfigModule.forRoot(),
+        RequestContextModule,
         TypeOrmModule.forFeature([
             User
         ])
