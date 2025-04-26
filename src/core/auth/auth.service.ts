@@ -76,7 +76,8 @@ export class AuthService {
     }
 
     async registerUser(registerUserDto: RegisterUserDto) {
-        return await this.userService.createUser(registerUserDto)
+        const user = await this.userService.createUser(registerUserDto)
+        return this.login(user)
     }
 
     async refreshAccessToken(user: User) {

@@ -6,16 +6,17 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import * as fs from 'fs';
+import { MetadataSeeder } from './seed/metadata.seed';
 
 async function bootstrap() {
-    const httpsOptions = {
-        key: fs.readFileSync('./key.pem'),
-        cert: fs.readFileSync('./cert.pem'),
-    };
+    // const httpsOptions = {
+    //     key: fs.readFileSync('./key.pem'),
+    //     cert: fs.readFileSync('./cert.pem'),
+    // };
 
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         rawBody: true,
-        ...httpsOptions
+        // ...httpsOptions
     });
 
     // Parsers
@@ -58,6 +59,10 @@ async function bootstrap() {
         ],
         credentials: true, // Allow cookies to be sent
     })
+
+
+    const metadataSeeder = app.get(MetadataSeeder);
+    await metadataSeeder.seedData();
 
     await app.listen(process.env.SERVER_PORT);
 }

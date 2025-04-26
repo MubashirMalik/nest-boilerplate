@@ -19,8 +19,19 @@ export class AuthController {
     @Post('register-user')
     async registerTenant(
         @Body() registerUser: RegisterUserDto,
+        @Res({ passthrough: true }) res
     ) {
-        return await this.authService.registerUser(registerUser)
+        const { user, accessToken, refreshToken } = await this.authService.registerUser(registerUser)
+        res.cookie(
+            'refreshToken', 
+            refreshToken, 
+            { 
+                httpOnly: true, 
+                secure: true, 
+                sameSite: 'None',
+                maxAge: REFRESH_TOKEN_MAX_AGE  
+            }
+        ).send({ success: true, user, accessToken }) 
     }
 
     @PublicRoute()
