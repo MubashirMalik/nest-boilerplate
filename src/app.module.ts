@@ -8,6 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { JwtStrategy } from './core/auth/jwt.strategy';
 import { CoreModule } from './core/core.module';
+import { MetadataSeeder } from './seed/metadata.seed';
 
 @Module({
     imports: [
@@ -41,6 +42,7 @@ import { CoreModule } from './core/core.module';
             provide: APP_GUARD,
             useClass: JwtAuthGuard,
         },
+        MetadataSeeder
     ],
 })
 export class AppModule {}
