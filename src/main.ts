@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
@@ -7,6 +7,7 @@ import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import * as fs from 'fs';
 import { MetadataSeeder } from './seed/metadata.seed';
+import { HttpExceptionFilter } from './filters/HttpException.filter';
 
 async function bootstrap() {
     // const httpsOptions = {
@@ -22,6 +23,9 @@ async function bootstrap() {
     // Parsers
     app.useBodyParser('json');
     app.use(cookieParser())
+
+    const httpAdapter = app.get(HttpAdapterHost);
+    app.useGlobalFilters(new HttpExceptionFilter());
 
     // Pipes
     app.useGlobalPipes(new ValidationPipe(
