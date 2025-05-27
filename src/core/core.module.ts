@@ -11,6 +11,7 @@ import { RefreshTokenStrategy } from "./auth/refresh-token.strategy";
 import { RequestContextModule } from "./request-context/request-context.module";
 import { UtilityService } from "./utility/utility.service";
 import { MailerModule } from "@nestjs-modules/mailer";
+import { ScheduleModule } from "@nestjs/schedule";
 
 @Module({
     imports: [
@@ -30,6 +31,7 @@ import { MailerModule } from "@nestjs-modules/mailer";
             }),
             inject: [ConfigService]
         }),
+        ScheduleModule.forRoot(),
         RequestContextModule,
         TypeOrmModule.forFeature([
             User
