@@ -13,4 +13,10 @@ export class User extends BaseEntity {
 
     @Column('varchar', { length: 255, default: '' })
     refreshToken: string
+
+    @Column('varchar', { length: 6, default: '' })
+    emailVerificationCode: string
+
+    @Column('varchar', { length: 6, default: '' })
+    passwordResetCode: string
 }

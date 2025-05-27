@@ -6,6 +6,8 @@ import { RegisterUserDto } from "./dtos/register-user.dto";
 import { PublicRoute } from "../decorators/public-route.decorator";
 import { RefreshTokenGuard } from "src/guards/refresh-token.guard";
 import { REFRESH_TOKEN_MAX_AGE } from "src/constants";
+import { ResetPasswordDto } from "./dtos/reset-password.dto";
+import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
 
 @Injectable()
 @ApiTags('Auth')
@@ -55,10 +57,16 @@ export class AuthController {
         ).send({ success: true, user, accessToken })
    }
 
-    @Post('logout')
-    async logout(@Res({ passthrough: true }) res) {
-        res.send({  success: true , message: 'Logout successful' })
-    }
+   @Post('logout')
+   async logout(@Res({ passthrough: true }) res) {
+       res.clearCookie('refreshToken', {
+           httpOnly: true,
+           secure: true,
+           sameSite: 'None'
+       });
+         
+       res.send({ success: true, message: 'Logged out successfully' });
+   }
 
     @PublicRoute()
     @UseGuards(RefreshTokenGuard)
@@ -67,5 +75,21 @@ export class AuthController {
         @Request() req,
     ) {
         return await this.authService.refreshAccessToken(req.user)
+    }
+
+    @PublicRoute()
+    @Post('/forgot-password')
+    async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+        return await this.authService.forgotPassword(forgotPasswordDto.email)
+    }
+
+    @PublicRoute()
+    @Post('/reset-password')
+    async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+        return await this.authService.resetPassword(
+            resetPasswordDto.email,
+            resetPasswordDto.otp,
+            resetPasswordDto.newPassword
+        )
     }
 }
