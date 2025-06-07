@@ -3,7 +3,7 @@ import { AuthService } from "./auth.service";
 import { LocalAuthGuard } from "src/guards/local-auth.guard";
 import { ApiTags } from "@nestjs/swagger";
 import { RegisterUserDto } from "./dtos/register-user.dto";
-import { PublicRoute } from "../decorators/public-route.decorator";
+import { PublicRoute } from "src/decorators/public-route.decorator";
 import { RefreshTokenGuard } from "src/guards/refresh-token.guard";
 import { REFRESH_TOKEN_MAX_AGE } from "src/constants";
 import { ResetPasswordDto } from "./dtos/reset-password.dto";
