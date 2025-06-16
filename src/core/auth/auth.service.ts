@@ -80,12 +80,10 @@ export class AuthService {
     }
 
     async refreshAccessToken(user: User) {
+        const { accessToken, payload } = await this.getSignedAccessToken(user)
         return { 
-            user: {
-                id: user.id,
-                email: user.email
-            }, 
-            accessToken: await this.getSignedAccessToken(user) 
+            user: payload, 
+            accessToken
         }
     }
 
