@@ -1,9 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Observable } from "rxjs";
-import { ROLE } from "../constants/role.enum";
-import { ROLE_KEY } from "../decorators/role.decorator";
 import { UserPayload } from "src/core/auth/user-payload.model";
+import { ROLE } from "../constants/role.enum";
+import { ROLE_KEY } from "src/decorators/role.decorator";
 
 @Injectable()
 export class RoleGuard implements CanActivate {
@@ -15,14 +15,14 @@ export class RoleGuard implements CanActivate {
         // Handler -> Function, Class -> Controller
         // Precedence: Handler (then ->) Class
         // Docs: https://docs.nestjs.com/fundamentals/execution-context#reflection-and-metadata
-        // If permissions found at handler level then override permissions of controller.
-        const requiredRole = this.reflector.getAllAndOverride<ROLE>(ROLE_KEY, [ 
+        // If roles found at handler level then override roles of controller.
+        const requiredRoles = this.reflector.getAllAndOverride<ROLE[]>(ROLE_KEY, [ 
             context.getHandler(),
             context.getClass(),
         ]);
 
         // If there is no Role Guard present, it means no role is found. We ALLOW access! 
-        if (!requiredRole) {
+        if (!requiredRoles || requiredRoles.length === 0) {
             return true;
         }
 
@@ -30,8 +30,9 @@ export class RoleGuard implements CanActivate {
         if (!user) { // This should not happen for logged in users
             return false;
         }
-    
-        // return requiredRole === user?.roleId 
-        return true;
+
+        // Check if user has the required role.
+        const hasRole = requiredRoles.some(role => user.roleId === role);
+        return hasRole;
     }
 }

@@ -92,4 +92,9 @@ export class AuthController {
             resetPasswordDto.newPassword
         )
     }
+
+    @Get("verify-token")
+    async verifyToken(@Request() req) {
+        return await this.authService.verifyToken(req.user);
+    }
 }

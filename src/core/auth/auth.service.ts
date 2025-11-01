@@ -31,11 +31,16 @@ export class AuthService {
         return user
     }
 
-    async getSignedAccessToken(user: User) {
-        const payload: UserPayload = { 
+     getPayload(user: User): UserPayload {
+        return {
             id: user.id,
-            email: user.email
+            email: user.email,
+            roleId: user.roleId
         };
+    }
+
+    async getSignedAccessToken(user: User) {
+        const payload = this.getPayload(user);
 
         const accessToken = await this.jwtService.signAsync(payload, { 
             expiresIn: ACCESS_TOKEN_EXPIRY, 
@@ -136,5 +141,18 @@ export class AuthService {
         await user.save()
 
         return { success: true, message: 'Password reset successfully' }
+    }
+
+    async verifyToken(user: User) {
+        const updatedUser = await this.userService.getUserForAuth({ id: user.id });
+        if (!updatedUser) {
+            throw new NotFoundException('User not found');
+        }
+
+        const payload = this.getPayload(updatedUser);
+
+        return {
+            user: payload
+        };
     }
 }

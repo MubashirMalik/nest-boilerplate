@@ -12,6 +12,7 @@ import { RequestContextModule } from "./request-context/request-context.module";
 import { UtilityService } from "./utility/utility.service";
 import { MailerModule } from "@nestjs-modules/mailer";
 import { ScheduleModule } from "@nestjs/schedule";
+import { AwsService } from "./aws/aws.service";
 
 @Module({
     imports: [
@@ -38,6 +39,6 @@ import { ScheduleModule } from "@nestjs/schedule";
         ])
     ],
     controllers: [AuthController],
-    providers: [LocalStrategy, RefreshTokenStrategy, JwtService,  AuthService, UserService, UtilityService]
+    providers: [LocalStrategy, RefreshTokenStrategy, JwtService,  AuthService, UserService, UtilityService, AwsService]
 })
 export class CoreModule {}

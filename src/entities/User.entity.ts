@@ -1,4 +1,5 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Role } from "./Role.entity";
+import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('user')
 export class User extends BaseEntity {
@@ -19,4 +20,12 @@ export class User extends BaseEntity {
 
     @Column('varchar', { length: 6, default: '' })
     passwordResetCode: string
+
+    @Column('int')
+    roleId: number
+
+    // JOINS
+    @ManyToOne(() => Role, relatedTable => relatedTable.Users)
+    @JoinColumn({ name: 'roleId', referencedColumnName:'id'})
+    Role: Role
 }

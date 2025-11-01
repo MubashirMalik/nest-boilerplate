@@ -1,4 +1,5 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { BaseEntity, Column, Entity, JoinColumn, OneToMany, PrimaryGeneratedColumn } from "typeorm"
+import { User } from "./User.entity"
 
 @Entity('role')
 export class Role extends BaseEntity {
@@ -7,4 +8,9 @@ export class Role extends BaseEntity {
 
     @Column('varchar', { length: 50, unique: true })
     name: string
+
+    // JOINS
+    @OneToMany(() => User, relatedTable => relatedTable.Role)
+    @JoinColumn({ name: 'id', referencedColumnName:'roleId'})
+    Users: User[]
 }

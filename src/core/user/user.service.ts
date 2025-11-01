@@ -28,4 +28,12 @@ export class UserService {
 
         return await this.userRepo.save(user)
     }
+
+    async getUserForAuth(fields: FindOptionsWhere<User> | FindOptionsWhere<User>[]) {
+        const user = await this.userRepo.findOne({ 
+            where: fields, 
+        });
+        
+        return user;
+    }
 }
