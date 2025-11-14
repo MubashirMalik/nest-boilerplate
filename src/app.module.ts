@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { APP_GUARD } from '@nestjs/core';
@@ -46,7 +46,7 @@ import { LogRequestMiddleware } from './middlewares/LogRequest.middleware';
         MetadataSeeder
     ],
 })
-export class AppModule {
+export class AppModule implements NestModule {
      configure(consumer: MiddlewareConsumer) {
         // Middleware to log web requests in order to monitor performance for different API endpoints
         consumer
