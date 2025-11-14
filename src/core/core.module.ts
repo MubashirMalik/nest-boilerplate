@@ -13,6 +13,7 @@ import { UtilityService } from "./utility/utility.service";
 import { MailerModule } from "@nestjs-modules/mailer";
 import { ScheduleModule } from "@nestjs/schedule";
 import { AwsService } from "./aws/aws.service";
+import { List } from "src/entities/List.entity";
 
 @Module({
     imports: [
@@ -35,7 +36,7 @@ import { AwsService } from "./aws/aws.service";
         ScheduleModule.forRoot(),
         RequestContextModule,
         TypeOrmModule.forFeature([
-            User
+            User, List
         ])
     ],
     controllers: [AuthController],

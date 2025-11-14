@@ -37,11 +37,11 @@ export class MetadataSeeder {
         }
     }
 
-    async seedLists(list, type: 'countries' | 'industries' | 'unitTypes') {
+    async seedLists(list, type: 'countries' | 'industries') {
         const listRepo = this.dataSource.getRepository(List);
-        const countriesInDb = await listRepo.find({ where: { type }});
+        const recordsInDb = await listRepo.find({ where: { type }});
         for (const l of list) {
-            const exists = countriesInDb.find(dbCountry => dbCountry.label === l.label);
+            const exists = recordsInDb.find(dbRecord => dbRecord.label === l.label);
             if (!exists) {
                 await listRepo.save(listRepo.create({ 
                     label: l.label,

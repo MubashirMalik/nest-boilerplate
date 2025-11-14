@@ -4,14 +4,19 @@ import { RequestContext } from "../request-context/request-context.model";
 import { randomInt } from "crypto";
 import { Email } from "src/constants/email";
 import { MailerService } from "@nestjs-modules/mailer";
+import { GetPaginatedRecordsDto } from "src/dtos/get-paginated-records.dto";
+import { Repository, SelectQueryBuilder } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
+import { List } from "src/entities/List.entity";
 
 @Injectable() 
 export class UtilityService {
     constructor(
+        @InjectRepository(List) private readonly listRepo: Repository<List>,
         private readonly mailer: MailerService
     ) {}
 
-        async getPaginatedRecords(query: SelectQueryBuilder<any>, params: GetPaginatedRecordsDto) {
+    async getPaginatedRecords(query: SelectQueryBuilder<any>, params: GetPaginatedRecordsDto) {
         const blockSize = params.endRow - params.startRow
         if (blockSize > 0) {
             query.take(blockSize + 1).skip(params.startRow)
@@ -193,4 +198,13 @@ export class UtilityService {
             return false
         }
     }
+
+    // Critical: This method loads app metadata. Only add essential data to maintain performance.
+    async getAppMetadata() {
+        //todo: this is placeholder
+        const [dateFormats] = await Promise.all([
+            this.listRepo.find({ where: { type: 'dateFormats' }})
+        ])
+        return { dateFormats }
+    } 
 }
