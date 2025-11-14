@@ -9,6 +9,7 @@ import { join } from 'path';
 import { JwtStrategy } from './core/auth/jwt.strategy';
 import { CoreModule } from './core/core.module';
 import { MetadataSeeder } from './seed/metadata.seed';
+import { LogRequestMiddleware } from './middlewares/LogRequest.middleware';
 
 @Module({
     imports: [
@@ -45,4 +46,11 @@ import { MetadataSeeder } from './seed/metadata.seed';
         MetadataSeeder
     ],
 })
-export class AppModule {}
+export class AppModule {
+     configure(consumer: MiddlewareConsumer) {
+        // Middleware to log web requests in order to monitor performance for different API endpoints
+        consumer
+        .apply(LogRequestMiddleware)
+        .forRoutes('*');    
+    }
+}
