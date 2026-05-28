@@ -14,7 +14,6 @@ import { MailerModule } from "@nestjs-modules/mailer";
 import { ScheduleModule } from "@nestjs/schedule";
 import { AwsService } from "./aws/aws.service";
 import { List } from "src/entities/List.entity";
-import Stripe from "stripe";
 
 @Module({
     imports: [
@@ -43,12 +42,6 @@ import Stripe from "stripe";
     controllers: [AuthController],
     providers: [
         LocalStrategy, RefreshTokenStrategy, JwtService,  AuthService, UserService, UtilityService, AwsService,
-        {
-            provide: 'STRIPE_CLIENT',
-            useFactory: (cfg: ConfigService) =>
-                new Stripe(cfg.get('STRIPE_SECRET_KEY'), { apiVersion: '2025-10-29.clover' }),
-            inject: [ConfigService],
-        },
     ]
 })
 export class CoreModule {}
