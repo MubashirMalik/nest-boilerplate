@@ -14,6 +14,21 @@ import { MailerModule } from "@nestjs-modules/mailer";
 import { ScheduleModule } from "@nestjs/schedule";
 import { AwsService } from "./aws/aws.service";
 import { List } from "src/entities/List.entity";
+import { ErrorLog } from "src/entities/Error.entity";
+import { CronJobService } from "./cron-job/cron-job.service";
+import { Permission } from "src/entities/Permission.entity";
+import { Role } from "src/entities/Role.entity";
+import { RoleXPermission } from "src/entities/RoleXPermission.entity";
+import { UserXPermission } from "src/entities/UserXPermission.entity";
+import { ActivityLog } from "src/entities/ActivityLog.entity";
+import { UtilityController } from "./utility/utility.controller";
+import { RoleService } from "./role/role.service";
+import { RoleController } from "./role/role.controller";
+import { ActivityLogService } from "./activity-log/activity-log.service";
+import { ActivityLogController } from "./activity-log/activity-log.controller";
+import { BullModule } from "@nestjs/bullmq";
+import { ActivityLogProcessor } from "src/processors/activity-log.processor";
+import { UserSubscriber } from "src/subscribers/UserSubscriber";
 
 @Module({
     imports: [
@@ -35,13 +50,17 @@ import { List } from "src/entities/List.entity";
         }),
         ScheduleModule.forRoot(),
         RequestContextModule,
+        BullModule.registerQueue({ name: 'activity-log' }),
         TypeOrmModule.forFeature([
-            User, List
+            User, List, ErrorLog, Role, Permission, RoleXPermission, UserXPermission, ActivityLog
         ])
     ],
-    controllers: [AuthController],
+    controllers: [AuthController, UtilityController, RoleController, ActivityLogController],
     providers: [
-        LocalStrategy, RefreshTokenStrategy, JwtService,  AuthService, UserService, UtilityService, AwsService,
-    ]
+        LocalStrategy, RefreshTokenStrategy, JwtService, AuthService, UserService, UtilityService, AwsService,
+        RoleService, ActivityLogService, ActivityLogProcessor, UserSubscriber,
+        ...(process.env.RUN_CRON_JOBS === 'yes' ? [CronJobService] : []),
+    ],
+    exports: [UtilityService, ActivityLogService],
 })
 export class CoreModule {}

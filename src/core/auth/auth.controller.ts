@@ -8,6 +8,7 @@ import { RefreshTokenGuard } from "src/guards/refresh-token.guard";
 import { REFRESH_TOKEN_MAX_AGE } from "src/constants";
 import { ResetPasswordDto } from "./dtos/reset-password.dto";
 import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
+import { VerifyOtpDto } from "./dtos/verify-otp.dto";
 
 @Injectable()
 @ApiTags('Auth')
@@ -81,6 +82,12 @@ export class AuthController {
     @Post('/forgot-password')
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
         return await this.authService.forgotPassword(forgotPasswordDto.email)
+    }
+
+    @PublicRoute()
+    @Post('/verify-otp')
+    async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+        return await this.authService.verifyOtp(verifyOtpDto.email, verifyOtpDto.otp)
     }
 
     @PublicRoute()

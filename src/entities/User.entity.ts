@@ -1,5 +1,8 @@
 import { Role } from "./Role.entity";
-import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { ErrorLog } from "./Error.entity";
+import { UserXPermission } from "./UserXPermission.entity";
+import { ActivityLog } from "./ActivityLog.entity";
+import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('user')
 export class User extends BaseEntity {
@@ -28,4 +31,13 @@ export class User extends BaseEntity {
     @ManyToOne(() => Role, relatedTable => relatedTable.Users)
     @JoinColumn({ name: 'roleId', referencedColumnName:'id'})
     Role: Role
+
+    @OneToMany(() => ErrorLog, relatedTable => relatedTable.User)
+    Errors: ErrorLog[]
+
+    @OneToMany(() => UserXPermission, relatedTable => relatedTable.User)
+    UserXPermission: UserXPermission[]
+
+    @OneToMany(() => ActivityLog, relatedTable => relatedTable.User)
+    ActivityLogs: ActivityLog[]
 }

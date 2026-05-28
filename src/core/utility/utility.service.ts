@@ -1,19 +1,27 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { UserPayload } from "../auth/user-payload.model";
 import { RequestContext } from "../request-context/request-context.model";
-import { randomInt } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes, randomInt, scryptSync } from "crypto";
 import { Email } from "src/constants/email";
 import { MailerService } from "@nestjs-modules/mailer";
 import { GetPaginatedRecordsDto } from "src/dtos/get-paginated-records.dto";
-import { Repository, SelectQueryBuilder } from "typeorm";
+import { In, LessThan, Not, Repository, SelectQueryBuilder } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { List } from "src/entities/List.entity";
+import { ErrorLog } from "src/entities/Error.entity";
+import { Role } from "src/entities/Role.entity";
+import { Permission } from "src/entities/Permission.entity";
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable() 
 export class UtilityService {
     constructor(
         @InjectRepository(List) private readonly listRepo: Repository<List>,
-        private readonly mailer: MailerService
+        @InjectRepository(ErrorLog) private readonly errorLogRepository: Repository<ErrorLog>,
+        @InjectRepository(Role) private readonly roleRepository: Repository<Role>,
+        @InjectRepository(Permission) private readonly permissionRepository: Repository<Permission>,
+        private readonly mailer: MailerService,
     ) {}
 
     async getPaginatedRecords(query: SelectQueryBuilder<any>, params: GetPaginatedRecordsDto) {
@@ -199,12 +207,154 @@ export class UtilityService {
         }
     }
 
-    // Critical: This method loads app metadata. Only add essential data to maintain performance.
+    generateSecurePassword(length = 16): string {
+        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const lower = 'abcdefghijklmnopqrstuvwxyz';
+        const digits = '0123456789';
+        const special = '!@#$%^&*';
+        const all = upper + lower + digits + special;
+
+        if (length < 4) {
+            throw new Error('Password length must be at least 4 characters.');
+        }
+
+        const getRandomChar = (charset: string) => charset[Math.floor(Math.random() * charset.length)];
+        const requiredChars = [
+            getRandomChar(upper),
+            getRandomChar(lower),
+            getRandomChar(digits),
+            getRandomChar(special),
+        ];
+        const remainingChars = Array.from({ length: length - requiredChars.length }, () => getRandomChar(all));
+        const passwordChars = [...requiredChars, ...remainingChars];
+
+        for (let i = passwordChars.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
+        }
+
+        return passwordChars.join('');
+    }
+
+    async writeToCsv(fileName: string, headers: string[], keys: string[], data: Record<string, unknown>[]): Promise<string> {
+        const filePath = path.join(process.cwd(), 'temp', `${fileName}.csv`);
+
+        if (!fs.existsSync(path.join(process.cwd(), 'temp'))) {
+            fs.mkdirSync(path.join(process.cwd(), 'temp'));
+        }
+
+        const rows = data.map(obj => keys.map(key => {
+            let value = obj[key];
+            if (typeof value === 'string' && value.includes(',')) {
+                value = `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        }).join(','));
+
+        const csvContent = [headers.join(','), ...rows].join('\n');
+        fs.writeFileSync(filePath, csvContent);
+
+        setTimeout(() => {
+            fs.unlink(filePath, (err) => {
+                if (err) console.error(`Error while deleting file: ${err.message}`);
+            });
+        }, 50000);
+
+        return filePath;
+    }
+
+    encryptAES(data: string, secretKey?: string): { encryptedData: string; iv: string; authTag: string; salt: string } {
+        const salt = randomBytes(16).toString('hex');
+        const keySource = secretKey || process.env.AES_SECRET_KEY || 'default-secret-key-for-development';
+        const key = scryptSync(keySource, salt, 32);
+        const iv = randomBytes(16);
+        const cipher = createCipheriv('aes-256-gcm', key, iv);
+
+        let encryptedData = cipher.update(data, 'utf8', 'hex');
+        encryptedData += cipher.final('hex');
+
+        return {
+            encryptedData,
+            iv: iv.toString('hex'),
+            authTag: cipher.getAuthTag().toString('hex'),
+            salt,
+        };
+    }
+
+    decryptAES(encryptedData: string, iv: string, authTag: string, salt: string, secretKey?: string): string {
+        const keySource = secretKey || process.env.AES_SECRET_KEY || 'default-secret-key-for-development';
+        const key = scryptSync(keySource, salt, 32);
+        const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'hex'));
+        decipher.setAuthTag(Buffer.from(authTag, 'hex'));
+
+        let decryptedData = decipher.update(encryptedData, 'hex', 'utf8');
+        decryptedData += decipher.final('utf8');
+        return decryptedData;
+    }
+
+    encryptAESToString(data: string, secretKey?: string): string {
+        return JSON.stringify(this.encryptAES(data, secretKey));
+    }
+
+    decryptAESFromString(encryptedString: string, secretKey?: string): string {
+        const encrypted = JSON.parse(encryptedString);
+        return this.decryptAES(encrypted.encryptedData, encrypted.iv, encrypted.authTag, encrypted.salt, secretKey);
+    }
+
     async getAppMetadata() {
-        //todo: this is placeholder
-        const [dateFormats] = await Promise.all([
-            this.listRepo.find({ where: { type: 'dateFormats' }})
-        ])
-        return { dateFormats }
-    } 
+        const [roles, permissions, dateFormats] = await Promise.all([
+            this.roleRepository.find({
+                relations: { RoleXPermission: { Permission: true } },
+            }),
+            this.permissionRepository.find(),
+            this.listRepo.find({ where: { type: 'dateFormats' } }),
+        ]);
+        return { roles, permissions, dateFormats }
+    }
+
+    async saveErrorLog(statusCode = 500, path = '', message = '', stack = '') {
+        let user: UserPayload = null;
+        let requestData = null;
+
+        try {
+            user = this.getRequestUser();
+        } catch {}
+
+        try {
+            const req = RequestContext.currentContext?.req;
+            if (req) {
+                requestData = JSON.stringify({
+                    body: req.body,
+                    params: req.params,
+                    query: req.query,
+                    headers: req.headers
+                });
+            }
+        } catch (error) {
+            console.error('Error extracting request data:', error.message);
+        }
+
+        try {
+            const errorLog = new ErrorLog();
+            errorLog.statusCode = statusCode;
+            errorLog.path = path;
+            errorLog.method = RequestContext.currentContext?.req?.method || null;
+            errorLog.message = message;
+            errorLog.stack = stack;
+            errorLog.username = user?.email ?? '';
+            errorLog.userId = user?.id ?? null;
+            errorLog.requestData = requestData;
+            errorLog.createdAt = new Date();
+            await errorLog.save();
+        } catch (error) {
+            console.error('Error saving error log:', error.message);
+        }
+    }
+
+    async clearErrorLogs() {
+        await this.errorLogRepository.delete({
+            createdAt: LessThan(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+            statusCode: Not(In([403])),
+        });
+    }
 }

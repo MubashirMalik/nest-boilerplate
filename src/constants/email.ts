@@ -4,6 +4,21 @@ export interface Email {
     html: string
 }
 
+export const ResetPasswordEmail = (email: string, otp: string): Email => ({
+    to: email,
+    subject: 'Password reset code',
+    html: `
+        <div>
+            <h3>Password reset</h3>
+            <p>Use this one-time code to reset your password:</p>
+            <div style="font-size: 24px; font-weight: bold; letter-spacing: 2px; margin: 20px 0;">
+                ${otp}
+            </div>
+            <p>This code expires in 10 minutes.</p>
+        </div>
+    `,
+});
+
 // DUMMPY EMAIL FOR TESTING
 export const VerifyEmail = (email: string, otp: string): Email => {
     return {

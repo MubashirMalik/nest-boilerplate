@@ -8,6 +8,7 @@ import { ValidationError } from 'class-validator';
 import * as fs from 'fs';
 import { MetadataSeeder } from './seed/metadata.seed';
 import { HttpExceptionFilter } from './filters/HttpException.filter';
+import { UtilityService } from './core/utility/utility.service';
 
 async function bootstrap() {
     // const httpsOptions = {
@@ -25,7 +26,7 @@ async function bootstrap() {
     app.use(cookieParser())
 
     const httpAdapter = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalFilters(new HttpExceptionFilter(app.get(UtilityService)));
 
     // Pipes
     app.useGlobalPipes(new ValidationPipe(
@@ -45,13 +46,24 @@ async function bootstrap() {
     // Disable Swagger API in environments other than development (staging, production)
     if (process.env.NEST_ENV === 'development') {
         const config = new DocumentBuilder()
-            .setTitle('ABC App')
-            .setDescription('The ABC API description')
+            .setTitle('Nest Boilerplate')
+            .setDescription('Nest API boilerplate')
             .setVersion('1.0')
             .build();
 
         const document = SwaggerModule.createDocument(app, config);
-        SwaggerModule.setup('api', app, document);
+        SwaggerModule.setup('api', app, document, {
+            swaggerOptions: {
+                defaultModelsExpandDepth: -1,
+                defaultModelExpandDepth: 3,
+                apisSorter: 'alpha',
+                operationsSorter: 'alpha',
+                tagsSorter: 'alpha',
+                docExpansion: 'none',
+                filter: true,
+                showRequestHeaders: true,
+            },
+        });
     }
 
     app.enableCors({
